@@ -1,16 +1,25 @@
-#include <IoT3.h>
+/**
+ * @file Blinds.cpp
+ * @author Francois Rochefort (francoisrochefort@hotmail.fr)
+ * @brief 
+ * @version 0.1
+ * @date 2022-02-20
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 
-#define SPIN_DELAY   2000
+#include <IoT3.h>
 
 /**
  * GPIO pin definitions
  */
 #ifdef ESP12E
-#define SERVO_PIN               15
-#define PHOTOCELL_PIN           A0 //10
+#define SERVO_PIN     15
+#define PHOTOCELL_PIN A0
 #else
-#define SERVO_PIN      LED_BUILTIN
-#define PHOTOCELL_PIN           A0
+#define SERVO_PIN      2
+#define PHOTOCELL_PIN A0
 #endif
 
 /**
@@ -18,23 +27,25 @@
  */
 #define SPIN_FORWARD    0
 #define SPIN_REVERSE  150
+#define SPIN_DELAY   2000
 
 /**
  * @brief Construct a new Blinds:: Blinds object
  * 
  * @param observer 
  */
-Blinds::Blinds(BlindsObserver& observer) : observer(observer), mode(manualMode), state(closedState) {}
+Blinds::Blinds(BlindsObserver& observer) :
+    observer(observer), mode(BM_MANUAL), state(BS_CLOSED) {}
 
 /**
  * @brief Set the state of the blinds according to a given event
  * 
  * @param event 
  */
-void Blinds::setState(blindsEvent event) {
+void Blinds::setState(BlindsEvent event) {
     switch (event) {
-        case openEvent:
-            if (mode == manualMode && state == closedState) {
+        case BE_OPEN:
+            if (mode == BM_MANUAL && state == BS_CLOSED) {
 
                 /** 
                  * User is opening the blinds from the cellphone app
@@ -42,12 +53,12 @@ void Blinds::setState(blindsEvent event) {
                 servo.attach(SERVO_PIN);
                 servo.write(SPIN_REVERSE);
                 startTime = millis();
-                state = openingState;
+                state = BS_OPENING;
                 observer.onOpening();
             }
             break;
-        case closeEvent:
-            if (mode == manualMode && state == openedState) {
+        case BE_CLOSE:
+            if (mode == BM_MANUAL && state == BS_OPENED) {
 
                 /** 
                  * User is closing the blinds from the cellphone app
@@ -55,32 +66,32 @@ void Blinds::setState(blindsEvent event) {
                 servo.attach(SERVO_PIN);
                 servo.write(SPIN_FORWARD);
                 startTime = millis();
-                state = closingState;
+                state = BS_CLOSING;
                 observer.onClosing();
             }
             break;
-        case timeoutEvent:
-            if (state == openingState) {
+        case BE_TIMEOUT:
+            if (state == BS_OPENING) {
 
                 /** 
                  * Blinds are completely opened
                  */
                 servo.detach();
-                state = openedState;
+                state = BS_OPENED;
                 observer.onOpened();
 
-            } else if (state == closingState) {
+            } else if (state == BS_CLOSING) {
 
                 /** 
                  * Blinds are completely closed
                  */
                 servo.detach();
-                state = closedState;
+                state = BS_CLOSED;
                 observer.onClosed();
             }
             break;
-        case dayTimeEvent:
-            if (mode == automaticMode && state == closedState) {
+        case BE_DAYTIME:
+            if (mode == BM_AUTOMATIC && state == BS_CLOSED) {
 
                 /**
                  * It is day time; start opening the blinds
@@ -88,12 +99,12 @@ void Blinds::setState(blindsEvent event) {
                 servo.attach(SERVO_PIN);
                 servo.write(SPIN_REVERSE);
                 startTime = millis();
-                state = openingState;
+                state = BS_OPENING;
                 observer.onOpening();
             }
             break;
-        case nightTimeEvent:
-            if (mode == automaticMode && state == openedState) {
+        case BE_NIGHTTIME:
+            if (mode == BM_AUTOMATIC && state == BS_OPENED) {
 
                 /**
                  * It is night time; start opening the blinds
@@ -101,7 +112,7 @@ void Blinds::setState(blindsEvent event) {
                 servo.attach(SERVO_PIN);
                 servo.write(SPIN_FORWARD);
                 startTime = millis();
-                state = closingState;
+                state = BS_CLOSING;
                 observer.onClosing();
             }
             break;
@@ -111,10 +122,10 @@ void Blinds::setState(blindsEvent event) {
 /**
  * @brief Set the mode of operation of the blinds
  * 
- * @param mode automaticMode
- *             manualMode
+ * @param mode BM_AUTOMATIC
+ *             BM_MANUAL
  */
-void Blinds::setMode(blindsMode mode) {
+void Blinds::setMode(BlindsMode mode) {
     this->mode = mode;
     observer.onSetMode();
 }
@@ -122,30 +133,30 @@ void Blinds::setMode(blindsMode mode) {
 /**
  * @brief Start opening the blinds 
  */
-void Blinds::open(){setState(openEvent);}
+void Blinds::open(){setState(BE_OPEN);}
 
 /**
  * @brief Start closing the blinds
  */
-void Blinds::close(){setState(closeEvent);}
+void Blinds::close(){setState(BE_CLOSE);}
 
 /**
  * @brief Get the mode of operation of the blinds
  * 
- * @return automaticMode
- *         manualMode 
+ * @return BM_AUTOMATIC
+ *         BM_MANUAL 
  */
-blindsMode Blinds::getMode() {return mode;}
+BlindsMode Blinds::getMode() {return mode;}
 
 /**
  * @brief Determines the state of the blinds 
  * 
- * @return  openingState
- *          openedState
- *          closingState
- *          closedState
+ * @return  BS_OPENING
+ *          BS_OPENED
+ *          BS_CLOSING
+ *          BS_CLOSED
  */
-blindsState Blinds::getState(){return state;}
+BlindsState Blinds::getState(){return state;}
 
 /**
  * @brief Determines whether or not it is the night by performing 
@@ -169,7 +180,7 @@ void Blinds::setup() {
     Serial.begin(9600);
 
     /**
-     *  Initialize GPIO pins
+     * Initialize GPIO pins
      */
     pinMode(SERVO_PIN, OUTPUT);
     pinMode(PHOTOCELL_PIN, INPUT);
@@ -183,20 +194,20 @@ void Blinds::loop() {
     /**
      * Update the state of the blinds according to time
      */
-    if (millis() - startTime > SPIN_DELAY) setState(timeoutEvent);
+    if (millis() - startTime > SPIN_DELAY) setState(BE_TIMEOUT);
 
     /**
      * Update the state of the blinds according to the light
      */
     if (isNightTime()) {
-        setState(nightTimeEvent);
+        setState(BE_NIGHTTIME);
     }
     else {
-        setState(dayTimeEvent);
+        setState(BE_DAYTIME);
     }
 
     /**
      * Required for MQTT
      */
-    delay(10);
+    delay(50);
 }

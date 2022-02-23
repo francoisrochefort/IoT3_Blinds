@@ -1,7 +1,19 @@
+/**
+ * @file SoftAccessPoint.cpp
+ * @author Francois Rochefort (francoisrochefort@hotmail.fr)
+ * @brief 
+ * @version 0.1
+ * @date 2022-02-20
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 
 #include <IoT3.h>
 
-/** Program variables */
+/**
+ * Program variables
+ */
 ESP8266WebServer SoftAccessPoint::server(80);
 
 void SoftAccessPoint::handleRoot() {
@@ -73,18 +85,23 @@ void SoftAccessPoint::handleRoot() {
 	</article>\
     </body>\
     </html>";
+    Serial.println(form);
     server.send(200, "text/html", form);
 }
 
 void SoftAccessPoint::handleForm() {
     if (server.method() != HTTP_POST) {
 
-        /** Only HTTP_POST is allowed */
+        /**
+         * Only HTTP_POST is allowed
+         */
         server.send(405, "text/plain", "Method Not Allowed");
 
     } else {
 
-        /** Save WiFi credentials */
+        /**
+         * Save WiFi credentials
+         */
         Repository repos;
         repos.setSSID(server.arg("ssid"));
         repos.setPassword(server.arg("password"));
@@ -93,7 +110,9 @@ void SoftAccessPoint::handleForm() {
         repos.setMQTTPort(server.arg("mqtt_port"));
         repos.save();
 
-        /** Send success message to user */
+        /**
+         * Send success message to user
+         */
         String resp = "Object configuration successfully saved. Please, reset to continue\n";
         resp += repos.toString();
         server.send(200, "text/plain", resp);
@@ -115,13 +134,18 @@ void SoftAccessPoint::handleNotFound() {
     server.send(404, "text/plain", resp);
 }
 
-SoftAccessPoint::SoftAccessPoint() {
-    Serial.begin(9600);
-}
+SoftAccessPoint::SoftAccessPoint() {}
 
 void SoftAccessPoint::setup() {
 
-    /** Init. Soft access point */
+    /**
+     * Initialize serial communication baud rate
+     */
+    Serial.begin(9600);
+
+    /**
+     * Init. Soft access point
+     */
     WiFi.softAP(DEF_APSSID, DEF_APPSK);
     IPAddress myIP = WiFi.softAPIP();
     server.on("/", handleRoot);

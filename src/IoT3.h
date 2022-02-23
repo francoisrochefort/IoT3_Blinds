@@ -1,6 +1,16 @@
-
 #ifndef IOT3_H
 #define IOT3_H
+
+/**
+ * @file IoT3.h
+ * @author Francois Rochefort (francoisrochefort@hotmail.fr)
+ * @brief 
+ * @version 0.1
+ * @date 2022-02-20
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
 
 #include <Arduino.h>
 #include <ESP8266WebServer.h>
@@ -50,17 +60,37 @@ class SoftAccessPoint;
 class BlindsStub;
 class Blinds;
 
+enum BlindsMode {
+    BM_MANUAL = 1,
+    BM_AUTOMATIC = 2
+};
+
+enum BlindsEvent {
+    BE_OPEN = 1,
+    BE_CLOSE = 2,
+    BE_TIMEOUT = 3,
+    BE_DAYTIME = 4,
+    BE_NIGHTTIME = 5
+};
+
+enum BlindsState {
+    BS_OPENING = 1,
+    BS_OPENED = 2,
+    BS_CLOSING = 3,
+    BS_CLOSED = 4
+};
+
 /**
  * class is responsable to abstract the media storage used by 
  * the firmware to load and save persistant informations 
  */
 class Repository {
-  char ssid[MAX_SSID];
-  char password[MAX_PASSWORD];
-  char name[MAX_NAME];
-  char mqttServer[MAX_MQTT_SERVER];
-  char mqttPort[MAX_MQTT_PORT];
-  bool ok;
+    char ssid[MAX_SSID];
+    char password[MAX_PASSWORD];
+    char name[MAX_NAME];
+    char mqttServer[MAX_MQTT_SERVER];
+    char mqttPort[MAX_MQTT_PORT];
+    bool ok;
 public:
     int offset(void* field);
     Repository();
@@ -77,26 +107,6 @@ public:
     void setMQTTPort(const String& str);
     void save();
     String toString();
-};
-
-enum blindsMode {
-    manualMode = 1,
-    automaticMode = 2
-};
-
-enum blindsEvent {
-    openEvent = 1,
-    closeEvent = 2,
-    timeoutEvent = 3,
-    dayTimeEvent = 4,
-    nightTimeEvent = 5
-};
-
-enum blindsState {
-    openingState = 1,
-    openedState = 2,
-    closingState = 3,
-    closedState = 4
 };
 
 class BlindsObserver {
@@ -146,18 +156,18 @@ public:
 
 class Blinds : public Firmware {
     BlindsObserver& observer;
-    blindsMode mode;
-    blindsState state;
+    BlindsMode mode;
+    BlindsState state;
     unsigned long startTime;
     Servo servo;
 public:
     Blinds(BlindsObserver& observer);
-    void setState(blindsEvent event);
-    void setMode(blindsMode mode);
+    void setState(BlindsEvent event);
+    void setMode(BlindsMode mode);
     void open();
     void close();
-    blindsMode getMode();
-    blindsState getState();
+    BlindsMode getMode();
+    BlindsState getState();
     bool isNightTime();
     virtual void setup();
     virtual void loop();

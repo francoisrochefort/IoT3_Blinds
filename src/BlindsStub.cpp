@@ -1,43 +1,72 @@
 
+/**
+ * @file BlindsStub.cpp
+ * @author Francois Rochefort (francoisrochefort@hotmail.fr)
+ * @brief 
+ * @version 0.1
+ * @date 2022-02-19
+ * 
+ * @copyright Copyright (c) 2022
+ * 
+ */
+
 #include <IoT3.h>
 #include <ESP8266WiFi.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
 
-/** Topics */
+/**
+ * Topics
+ */
 #define TOPIC_COMMANDS "/IOT3/COMMANDS"
 #define TOPIC_STATES   "/IOT3/STATES"
 
-/** Commands */
+/**
+ * Commands
+ */
 #define CMD_OPEN          "open"
 #define CMD_CLOSE         "close"
 #define CMD_SET_MODE      "set_mode"
 #define CMD_QUERY_OBJECTS "query_objects"
 
-/** Debug message */
+/**
+ * Debug message 
+ */
 #define STATE_DEVICE_READY "READY"
 
-/** States */
-#define STATE_OPENING      "opening"
-#define STATE_OPENED       "opened"
-#define STATE_CLOSING      "closing"
-#define STATE_CLOSED       "closed"
+/**
+ * States 
+ */
+#define STATE_OPENING "opening"
+#define STATE_OPENED  "opened"
+#define STATE_CLOSING "closing"
+#define STATE_CLOSED  "closed"
 
-/** Modes */
-#define MODE_MANUAL        "manual"
-#define MODE_AUTOMATIC     "automatic"
+/**
+ * Modes
+ */
+#define MODE_MANUAL    "manual"
+#define MODE_AUTOMATIC "automatic"
 
-/** Limits */
+/**
+ * Limits
+ */
 #define MAX_PAYLOAD 256
 #define MAX_MAC     6
 
-/** Program variables */
+/**
+ * Program variables 
+ */
 WiFiClient wifiClient;
 PubSubClient client(wifiClient);
 extern Blinds blinds;
 
 /**
- * MQTT callback function implementation
+ * @brief MQTT callback function implementation
+ * 
+ * @param topic 
+ * @param payload 
+ * @param length 
  */
 void BlindsStub::callback(char* topic, byte* payload, unsigned int length) 
 {
@@ -84,24 +113,24 @@ void BlindsStub::publish() {
     doc["name"] = repos.getName();
     JsonObject object = doc.createNestedObject("objects");
     switch (blinds.getState()){
-        case openingState:
+        case BS_OPENING:
             object["state"] = STATE_OPENING;
             break;
-        case openedState:
+        case BS_OPENED:
             object["state"] = STATE_OPENED;
             break;
-        case closingState:
+        case BS_CLOSING:
             object["state"] = STATE_CLOSING;
             break;
-        case closedState:
+        case BS_CLOSED:
             object["state"] = STATE_CLOSED;
             break;
     }
     switch (blinds.getMode()) {
-        case manualMode:
+        case BM_MANUAL:
             object["mode"] = MODE_MANUAL;
             break;
-        case automaticMode:
+        case BM_AUTOMATIC:
             object["mode"] = MODE_AUTOMATIC;
             break;
     }
@@ -110,20 +139,27 @@ void BlindsStub::publish() {
     client.publish(homeTopic(TOPIC_STATES).c_str(), json.c_str());
 }
 
+/**
+ * @brief Construct a new Blinds Stub:: Blinds Stub object
+ */
 BlindsStub::BlindsStub() {}
 
 void BlindsStub::setup() {
     
     Serial.begin(9600);
 
-    /** Load required information from repository */
+    /**
+     * Load required information from repository
+     */
     Repository repos;
     repos.load();
     String hostname = repos.getName();
     String domain = (repos.getMQTTServer().c_str());
     String port = (repos.getMQTTPort().c_str());
 
-    /** Init. WiFi client */
+    /**
+     * Init. WiFi client
+     */
     Serial.print("Connecting to WiFi");
     WiFi.mode(WIFI_STA);
     WiFi.hostname(hostname);
@@ -138,7 +174,9 @@ void BlindsStub::setup() {
     Serial.print(" using password: ");
     Serial.println(repos.getPassword());
 
-    /** Init. MQTT client */
+    /**
+     * Init. MQTT client
+     */
     Serial.print("Connecting to MQTT");
     client.setServer(domain.c_str(), port.toInt());
     client.setCallback(callback);
@@ -152,14 +190,20 @@ void BlindsStub::setup() {
     Serial.print(":");
     Serial.println(repos.getMQTTPort());
 
-    /**  Subscribe to topics */
+    /**
+     * Subscribe to topics
+     */
     client.subscribe(homeTopic(TOPIC_COMMANDS).c_str());
     client.subscribe(objectTopic(TOPIC_COMMANDS).c_str());
 
-    /** Send debug signal 'READY' to mosquitto_sub */
+    /**
+     * Send debug signal 'READY' to mosquitto_sub
+     */
     client.publish(homeTopic(TOPIC_STATES).c_str(), STATE_DEVICE_READY);
 
-    /** Init. the blinds */
+    /**
+     * Init. the blinds
+     */
     blinds.setup();
 }
 
